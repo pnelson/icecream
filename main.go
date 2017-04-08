@@ -143,7 +143,8 @@ func (s *server) help(w http.ResponseWriter) {
 		"`/icecream list` to list owing users",
 		"`/icecream help` to display this usage information",
 	}
-	err := render(w, strings.Join(lines, "\n"), true)
+	text := strings.Join(lines, "\n")
+	err := render(w, newPrivateMessage(text))
 	if err != nil {
 		abort(w, http.StatusInternalServerError)
 		return
@@ -164,7 +165,7 @@ func (s *server) list(w http.ResponseWriter) {
 	if text == "" {
 		text = "The icecream backlog is empty. Tread lightly."
 	}
-	err = render(w, text, false)
+	err = render(w, newPublicMessage(text))
 	if err != nil {
 		abort(w, http.StatusInternalServerError)
 		return
@@ -178,7 +179,7 @@ func (s *server) add(w http.ResponseWriter, name string) {
 		return
 	}
 	text := fmt.Sprintf("Added %s to the queue.", name)
-	err = render(w, text, false)
+	err = render(w, newPublicMessage(text))
 	if err != nil {
 		abort(w, http.StatusInternalServerError)
 		return
@@ -197,7 +198,7 @@ func (s *server) del(w http.ResponseWriter, id string) {
 		return
 	}
 	text := fmt.Sprintf("Deleted %s (%d) from the queue.", name, n)
-	err = render(w, text, false)
+	err = render(w, newPublicMessage(text))
 	if err != nil {
 		abort(w, http.StatusInternalServerError)
 		return
@@ -223,11 +224,15 @@ type msg struct {
 	Text string `json:"text"`
 }
 
-func render(w http.ResponseWriter, text string, private bool) error {
-	v := msg{"in_channel", text}
-	if private {
-		v.Type = "ephemeral"
-	}
+func newPublicMessage(text string) msg {
+	return msg{text, "in_channel"}
+}
+
+func newPrivateMessage(text string) msg {
+	return msg{text, "ephemeral"}
+}
+
+func render(w http.ResponseWriter, v msg) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
